@@ -3,6 +3,7 @@ package config
 import (
 	"bufio"
 	"bytes"
+	"context"
 	"encoding/json"
 	"fmt"
 	"io"
@@ -13,6 +14,7 @@ import (
 
 	"github.com/gruntwork-io/terragrunt/internal/cache"
 
+	"cloud.google.com/go/storage"
 	"github.com/aws/aws-sdk-go/aws"
 	"github.com/aws/aws-sdk-go/service/s3"
 	"github.com/hashicorp/go-getter"
@@ -815,6 +817,16 @@ func getTerragruntOutputJsonFromRemoteState(
 			}
 			ctx.TerragruntOptions.Logger.Debugf("Retrieved output from %s as json: %s using s3 bucket", targetConfigPath, jsonBytes)
 			return jsonBytes, nil
+		case "gcs":
+			jsonBytes, err := getTerragruntOutputJsonFromRemoteStateGCS(
+				targetTGOptions,
+				remoteState,
+			)
+			if err != nil {
+				return nil, err
+			}
+			ctx.TerragruntOptions.Logger.Debugf("Retrieved output from %s as json: %s using GCS bucket", targetConfigPath, jsonBytes)
+			return jsonBytes, nil
 		default:
 			ctx.TerragruntOptions.Logger.Errorf("FetchDependencyOutputFromState is not supported for backend %s, falling back to normal method", backend)
 		}
@@ -888,11 +900,64 @@ func getTerragruntOutputJsonFromRemoteStateS3(terragruntOptions *options.Terragr
 			terragruntOptions.Logger.Warnf("Failed to close remote state response %v", err)
 		}
 	}(result.Body)
-	steateBody, err := io.ReadAll(result.Body)
+	stateBody, err := io.ReadAll(result.Body)
 	if err != nil {
 		return nil, err
 	}
-	jsonState := string(steateBody)
+	jsonState := string(stateBody)
+	jsonMap := make(map[string]interface{})
+	err = json.Unmarshal([]byte(jsonState), &jsonMap)
+	if err != nil {
+		return nil, err
+	}
+	jsonOutputs, err := json.Marshal(jsonMap["outputs"])
+	if err != nil {
+		return nil, err
+	}
+	return jsonOutputs, nil
+}
+
+// getTerragruntOutputJsonFromRemoteStateGCS pulls the output directly from an GCS bucket without calling Terraform
+func getTerragruntOutputJsonFromRemoteStateGCS(terragruntOptions *options.TerragruntOptions, remoteState *remote.RemoteState) ([]byte, error) {
+	terragruntOptions.Logger.Debugf("Fetching outputs directly from gcs://%s/%s/default.tfstate", remoteState.Config["bucket"], remoteState.Config["prefix"])
+
+	gcsConfigExtended, err := remote.ParseExtendedGCSConfig(remoteState.Config)
+	if err != nil {
+		return nil, err
+	}
+
+	if err := remote.ValidateGCSConfig(gcsConfigExtended); err != nil {
+		return nil, err
+	}
+
+	var gcsConfig = gcsConfigExtended.RemoteStateConfigGCS
+
+	gcsClient, err := remote.CreateGCSClient(gcsConfig)
+	if err != nil {
+		return nil, err
+	}
+
+	bucket := gcsClient.Bucket(gcsConfig.Bucket)
+	object := bucket.Object(gcsConfig.Prefix + "/default.tfstate")
+
+	reader, err := object.NewReader(context.Background())
+
+	if err != nil {
+		return nil, err
+	}
+
+	defer func(reader *storage.Reader) {
+		err := reader.Close()
+		if err != nil {
+			terragruntOptions.Logger.Warnf("Failed to close remote state response %v", err)
+		}
+	}(reader)
+
+	stateBody, err := io.ReadAll(reader)
+	if err != nil {
+		return nil, err
+	}
+	jsonState := string(stateBody)
 	jsonMap := make(map[string]interface{})
 	err = json.Unmarshal([]byte(jsonState), &jsonMap)
 	if err != nil {
