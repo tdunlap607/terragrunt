@@ -42,13 +42,13 @@ func DisableLogColors() {
 	GlobalFallbackLogEntry = CreateLogEntry("", defaultLogLevel)
 }
 
-func JsonFormat() {
+func JSONFormat() {
 	jsonLogFormat = true
 	// Needs to re-create the global logger
 	GlobalFallbackLogEntry = CreateLogEntry("", defaultLogLevel)
 }
 
-func DisableJsonFormat() {
+func DisableJSONFormat() {
 	jsonLogFormat = false
 	// Needs to re-create the global logger
 	GlobalFallbackLogEntry = CreateLogEntry("", defaultLogLevel)

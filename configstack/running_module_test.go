@@ -581,7 +581,7 @@ func TestRemoveFlagExcludedNoExclude(t *testing.T) {
 		FlagExcluded:   false,
 	}
 
-	running_modules := configstack.RunningModules{
+	runningModules := configstack.RunningModules{
 		"a": runningModuleA,
 		"b": runningModuleB,
 		"c": runningModuleC,
@@ -597,7 +597,7 @@ func TestRemoveFlagExcludedNoExclude(t *testing.T) {
 		"e": runningModuleE,
 	}
 
-	actual := running_modules.RemoveFlagExcluded()
+	actual := runningModules.RemoveFlagExcluded()
 	assertRunningModuleMapsEqual(t, expected, actual, true)
 }
 
@@ -652,7 +652,7 @@ func TestRemoveFlagExcludedOneExcludeNoDependencies(t *testing.T) {
 		FlagExcluded:   true,
 	}
 
-	running_modules := configstack.RunningModules{
+	runningModules := configstack.RunningModules{
 		"a": runningModuleA,
 		"b": runningModuleB,
 		"c": runningModuleC,
@@ -663,7 +663,7 @@ func TestRemoveFlagExcludedOneExcludeNoDependencies(t *testing.T) {
 		"b": runningModuleB,
 	}
 
-	actual := running_modules.RemoveFlagExcluded()
+	actual := runningModules.RemoveFlagExcluded()
 	assertRunningModuleMapsEqual(t, expected, actual, true)
 }
 
@@ -756,14 +756,14 @@ func TestRemoveFlagExcludedOneExcludeWithDependencies(t *testing.T) {
 		FlagExcluded:   false,
 	}
 
-	running_modules := configstack.RunningModules{
+	runningModules := configstack.RunningModules{
 		"a": runningModuleA,
 		"b": runningModuleB,
 		"c": runningModuleC,
 		"d": runningModuleD,
 		"e": runningModuleE,
 	}
-	actual := running_modules.RemoveFlagExcluded()
+	actual := runningModules.RemoveFlagExcluded()
 
 	_runningModuleD := &configstack.RunningModule{
 		Module:         moduleD,
