@@ -1586,8 +1586,8 @@ func TestAutoRetryConfigurableRetriesErrors(t *testing.T) {
 		fixture      string
 		errorMessage string
 	}{
-		{TestFixtureAutoRetryConfigurableRetriesError1, "Cannot have less than 1 max retry"},
-		{TestFixtureAutoRetryConfigurableRetriesError2, "Cannot sleep for less than 0 seconds"},
+		{TestFixtureAutoRetryConfigurableRetriesError1, "cannot have less than 1 max retry, but you specified 0"},
+		{TestFixtureAutoRetryConfigurableRetriesError2, "cannot sleep for less than 0 seconds, but you specified -1"},
 	}
 	for _, tc := range tc {
 		tc := tc
